@@ -1,0 +1,21 @@
+import sympy as sp
+import math
+
+# Constants
+c_m = 2  # matter central charge
+Q_L = math.sqrt((25 - c_m) / 6)  # Liouville background charge
+
+# Solve for critical replica index n_crit from Q_L^2/4 = 1 - h_matter
+# h_matter = (n - 1/n) * (c_m / 24)
+n = sp.symbols('n', real=True)
+h_m = (n - 1/n) * (c_m / 24)
+equation = sp.Eq(Q_L**2 / 4, 1 - h_m)
+
+# Solve the equation
+solutions = sp.solve(equation, n)
+n_crit = [sol for sol in solutions if sol.is_real and sol > 1][0]
+
+# Numeric value
+n_crit_val = float(n_crit.evalf())
+
+n_crit_val
