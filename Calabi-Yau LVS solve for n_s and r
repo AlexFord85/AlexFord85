@@ -1,0 +1,110 @@
+import numpy as np
+import pandas as pd
+
+# --- Parameters for the CP^4[1,1,1,6,9] "Swiss-cheese" Calabi-Yau ---
+zeta3 = 1.2020569
+chi_CY = -540
+xi = -zeta3 * chi_CY / (2 * (2 * np.pi)**3)
+
+g_s = 0.1
+xi_eff = xi / g_s**1.5
+
+W0 = 1.0
+A_s = 1.0
+a_s = 2 * np.pi
+
+alpha = 1 / (9 * np.sqrt(2))
+
+# --- Define derivative dU/dtau_s ---
+def dU_dtau(ts, V):
+    term1 = 8 * a_s**2 * A_s**2 * np.sqrt(ts) * np.exp(-2 * a_s * ts) / (3 * alpha * V)
+    term2 = 4 * a_s * A_s * W0 * ts * np.exp(-a_s * ts) / (alpha * V**2)
+    return term1 - term2
+
+# --- Solve for tau_s minimum by bisection ---
+def find_tau_s(V):
+    a, b = 1e-4, 100.0
+    fa, fb = dU_dtau(a, V), dU_dtau(b, V)
+    for _ in range(60):
+        m = 0.5 * (a + b)
+        fm = dU_dtau(m, V)
+        if fa * fm > 0:
+            a, fa = m, fm
+        else:
+            b, fb = m, fm
+    return 0.5 * (a + b)
+
+# --- Full LVS potential U(V) ---
+def U_of_V(V):
+    tau_s = find_tau_s(V)
+    A_term = 8 * a_s**2 * A_s**2 * np.sqrt(tau_s) * np.exp(-2 * a_s * tau_s) / (3 * alpha * V)
+    B_term = 4 * a_s * A_s * W0 * tau_s * np.exp(-a_s * tau_s) / (alpha * V**2)
+    C_term = 3 * xi_eff * W0**2 / (4 * V**3)
+    return A_term - B_term + C_term
+
+# --- Canonical field φ from volume V ---
+def phi_to_V(phi):
+    return np.exp(phi / np.sqrt(1.5))
+
+def U_phi(phi):
+    V = phi_to_V(phi)
+    return U_of_V(V)
+
+# --- Slow-roll parameters ---
+def epsilon(phi):
+    dU = (U_phi(phi + 1e-5) - U_phi(phi - 1e-5)) / (2e-5)
+    return 0.5 * (dU / U_phi(phi))**2
+
+def eta(phi):
+    d2U = (U_phi(phi + 1e-5) - 2*U_phi(phi) + U_phi(phi - 1e-5)) / (1e-10)
+    return d2U / U_phi(phi)
+
+# --- Find φ_end where ε = 1 ---
+def find_phi_end():
+    a, b = 0.0, 20.0
+    for _ in range(60):
+        m = 0.5 * (a + b)
+        if epsilon(m) > 1:
+            b = m
+        else:
+            a = m
+    return 0.5 * (a + b)
+
+phi_end = find_phi_end()
+
+# --- Number of e-folds N(φ) ---
+def N_of_phi(phi):
+    phis = np.linspace(phi_end, phi, 1000)
+    eps_vals = np.array([epsilon(p) for p in phis])
+    return np.trapz(1 / np.sqrt(2 * eps_vals), phis)
+
+# --- Find φ_i for target N by bisection ---
+def phi_for_N(N_target):
+    a, b = phi_end + 1e-3, phi_end + 15.0
+    for _ in range(60):
+        m = 0.5 * (a + b)
+        if N_of_phi(m) > N_target:
+            b = m
+        else:
+            a = m
+    return 0.5 * (a + b)
+
+# --- Compute slow-roll observables for N=50,60 ---
+results = []
+for N in [50, 60]:
+    phi_i = phi_for_N(N)
+    eps = epsilon(phi_i)
+    et = eta(phi_i)
+    r = 16 * eps
+    n_s = 1 - 6 * eps + 2 * et
+    results.append({
+        'N (e-folds)': N,
+        'φ_i (initial)': phi_i,
+        'ε': eps,
+        'η': et,
+        'r': r,
+        'n_s': n_s
+    })
+
+df = pd.DataFrame(results)
+print(df)
