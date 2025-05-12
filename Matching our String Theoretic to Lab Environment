@@ -1,0 +1,39 @@
+import numpy as np
+
+# Number of qubits/sites in each row of the XY ladder
+N_sites = 20
+
+# Experimental coupling distribution parameters 
+mu_Je = 1.0          # mean local coupling (in dimensionless units)
+sigma_Je = 0.2       # standard deviation of local coupling
+
+# Global inter-row coupling
+Ja = 0.8             # in the same units
+
+# Sample disordered couplings J_e,k from the experimental distribution
+J_e = np.random.normal(loc=mu_Je, scale=sigma_Je, size=N_sites)
+
+# Map couplings to worldvolume flux units F_i
+# Here we assume a linear relation: J = kappa * F, so F = J / kappa
+# kappa relates flux quanta to energy; choose kappa = 1 for simplicity
+kappa = 1.0
+F_i = J_e / kappa
+
+# Uniform flux for inter-row coupling
+F_a = Ja / kappa
+
+# Package into a flux configuration dictionary
+flux_config = {
+    'F_i': F_i,   # array of site fluxes
+    'F_a': F_a    # uniform inter-row flux
+}
+
+print("Flux configuration for the disordered XY ladder environment:")
+print(f" - Site fluxes F_i: {F_i}")
+print(f" - Inter-row flux F_a: {F_a}")
+
+# Example usage (stub)
+try:
+    lnZ2 = compute_entanglement_entropy(n=2, flux_config=flux_config)
+except NotImplementedError as e:
+    print("\nNote:", e)
